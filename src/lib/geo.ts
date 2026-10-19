@@ -33,3 +33,16 @@ export function nearestCity<T extends { centerLat: number; centerLng: number }>(
   }
   return best;
 }
+
+export function withDistanceFrom<T extends { venue: LatLng; distanceM: number | null }>(
+  items: T[],
+  from: LatLng,
+  sortByDistance: boolean,
+): T[] {
+  const result = items.map((item) => ({
+    ...item,
+    distanceM: Math.round(distanceMeters(from, { lat: item.venue.lat, lng: item.venue.lng })),
+  }));
+  if (sortByDistance) result.sort((a, b) => a.distanceM - b.distanceM);
+  return result;
+}

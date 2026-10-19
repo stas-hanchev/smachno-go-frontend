@@ -31,6 +31,7 @@
     "next-env.d.ts",
     "src",
     "test",
+    "e2e",
     ".next/types/**/*.ts",
     "*.config.ts",
     "*.config.mjs",

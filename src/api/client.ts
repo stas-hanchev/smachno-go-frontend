@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import { ua } from '@/i18n/ua';
+import { useSessionStore } from '@/stores/session';
 import type { ApiErrorBody, Session } from './types';
 
 export const CSRF_HEADER = 'x-sg-csrf';
@@ -15,11 +16,11 @@ export function refreshSession(): Promise<Session | null> {
       headers: { [CSRF_HEADER]: '1' },
     })
     .then(({ data }) => {
-      useAuthStore.getState().setSession(data);
+      useSessionStore.getState().setSession(data);
       return data;
     })
     .catch(() => {
-      useAuthStore.getState().clear();
+      useSessionStore.getState().clear();
       return null;
     })
     .finally(() => {
@@ -29,7 +30,7 @@ export function refreshSession(): Promise<Session | null> {
 }
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
+  const token = useSessionStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -47,11 +48,41 @@ api.interceptors.response.use(undefined, async (error: AxiosError) => {
   return api(config);
 });
 
-export function errorMessage(error: unknown, fallback = 'Щось пішло не так. Спробуйте ще раз.') {
+export interface NormalizedError {
+  code: string;
+  message: string;
+  details: { field: string; message: string }[];
+  status: number | null;
+}
+
+export function normalizeError(error: unknown): NormalizedError {
   if (error instanceof AxiosError) {
     const body = error.response?.data as ApiErrorBody | undefined;
-    if (body?.error?.message) return body.error.message;
-    if (!error.response) return 'Немає зʼєднання з сервером';
+    if (body?.error) {
+      return {
+        code: body.error.code,
+        message: body.error.message,
+        details: body.error.details ?? [],
+        status: error.response?.status ?? null,
+      };
+    }
+    if (!error.response) {
+      return { code: 'NETWORK', message: ua.common.noConnection, details: [], status: null };
+    }
+    return {
+      code: 'HTTP',
+      message: ua.common.genericError,
+      details: [],
+      status: error.response.status,
+    };
   }
-  return fallback;
+  return { code: 'UNKNOWN', message: ua.common.genericError, details: [], status: null };
+}
+
+export function errorMessage(error: unknown) {
+  return normalizeError(error).message;
+}
+
+export function errorCode(error: unknown) {
+  return normalizeError(error).code;
 }

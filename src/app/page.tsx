@@ -1,165 +1,275 @@
 'use client';
 
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SearchIcon from '@mui/icons-material/Search';
+import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import Alert from '@mui/material/Alert';
-import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
-import MenuItem from '@mui/material/MenuItem';
-import Skeleton from '@mui/material/Skeleton';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
+import { styled } from '@mui/material/styles';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useDeferredValue, useEffect, useState } from 'react';
-import { getCities, searchListings } from '@/api/catalog';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
+import { getCategories, searchListings } from '@/api/catalog';
 import { errorMessage } from '@/api/client';
-import type { ListingCard as ListingCardData, ListingSort } from '@/api/types';
-import { ListingCard } from '@/components/ListingCard';
-import { distanceMeters, nearestCity, type LatLng } from '@/lib/geo';
+import type { ListingSort } from '@/api/types';
+import { CategoryTiles } from '@/components/home/CategoryTiles';
+import { HeroOffer } from '@/components/home/HeroOffer';
+import { LocationChip } from '@/components/layout/LocationChip';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { ListingGrid, ListingGridSkeleton } from '@/components/listing/ListingGrid';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { SectionHeading } from '@/components/ui/SectionHeading';
+import { useSearchArea } from '@/hooks/useSearchArea';
+import { ua } from '@/i18n/ua';
+import { withDistanceFrom } from '@/lib/geo';
+import { useSessionStore } from '@/stores/session';
+import { shadows } from '@/theme/theme';
 
-const SORT_LABELS: Record<ListingSort, string> = {
-  distance: 'Найближчі',
-  pickup: 'Час видачі',
-  discount: 'Найбільша знижка',
-  price: 'Найдешевші',
-  rating: 'Рейтинг закладу',
-};
-
-const RADIUS_OPTIONS_KM = [5, 10, 20, 30];
 const CITY_RADIUS_KM = 30;
-const PAGE_SIZE = 24;
+const NEAR_LIMIT = 8;
 
-function withDistanceFrom(listings: ListingCardData[], from: LatLng, sort: ListingSort) {
-  const result = listings.map((listing) => ({
-    ...listing,
-    distanceM: distanceMeters(from, { lat: listing.venue.lat, lng: listing.venue.lng }),
-  }));
-  if (sort === 'distance') result.sort((a, b) => a.distanceM - b.distanceM);
-  return result;
-}
+type NearSort = Extract<ListingSort, 'distance' | 'rating' | 'discount'>;
 
-export default function CatalogPage() {
+const NEAR_SORTS: { value: NearSort; label: string }[] = [
+  { value: 'distance', label: ua.home.sortDistance },
+  { value: 'rating', label: ua.home.sortRating },
+  { value: 'discount', label: ua.home.sortDiscount },
+];
+
+const Section = styled('section', { name: 'SgHome', slot: 'Section' })(({ theme }) => ({
+  paddingBottom: 40,
+  [theme.breakpoints.up('md')]: { paddingBottom: 56 },
+}));
+
+const SearchCard = styled('form', { name: 'SgHome', slot: 'SearchCard' })(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: 8,
+  borderRadius: 16,
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: shadows.card,
+  [theme.breakpoints.up('md')]: { padding: 12 },
+}));
+
+const SearchInput = styled('label', { name: 'SgHome', slot: 'SearchInput' })(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  padding: '8px 16px',
+  borderRadius: 12,
+  backgroundColor: theme.palette.mint.light,
+  '& svg': { color: theme.palette.muted, fontSize: 20 },
+  '& .MuiInputBase-root': { flex: 1 },
+}));
+
+const DesktopActions = styled('div', { name: 'SgHome', slot: 'DesktopActions' })(({ theme }) => ({
+  display: 'none',
+  alignItems: 'center',
+  gap: 8,
+  [theme.breakpoints.up('md')]: { display: 'flex' },
+}));
+
+const EcoBanner = styled('section', { name: 'SgHome', slot: 'EcoBanner' })(({ theme }) => ({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 20,
+  padding: 24,
+  borderRadius: 20,
+  backgroundColor: '#DEF2EE',
+  [theme.breakpoints.up('md')]: { padding: 32 },
+}));
+
+const EcoIcon = styled('span', { name: 'SgHome', slot: 'EcoIcon' })(({ theme }) => ({
+  width: 56,
+  height: 56,
+  flexShrink: 0,
+  borderRadius: 16,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: theme.palette.success.main,
+  color: theme.palette.common.white,
+}));
+
+export default function HomePage() {
+  const router = useRouter();
+  const user = useSessionStore((s) => s.user);
+  const { point, radiusKm, city, ready, isPrecise } = useSearchArea();
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState<ListingSort>('distance');
-  const [radiusKm, setRadiusKm] = useState(RADIUS_OPTIONS_KM[0]!);
-  const [geo, setGeo] = useState<LatLng | null>(null);
-  const deferredQ = useDeferredValue(q.trim());
+  const [sort, setSort] = useState<NearSort>('distance');
 
-  useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      ({ coords }) => setGeo({ lat: coords.latitude, lng: coords.longitude }),
-      () => {},
-      { maximumAge: 600_000, timeout: 10_000 },
-    );
-  }, []);
+  const hero = useQuery({
+    queryKey: ['listings', 'hero', { point, radiusKm }],
+    queryFn: () => searchListings({ ...point, radiusKm, sort: 'discount', limit: 1 }),
+    enabled: ready,
+  });
 
-  const cities = useQuery({ queryKey: ['cities'], queryFn: getCities, staleTime: Infinity });
-  const city = cities.data && (geo ? nearestCity(cities.data, geo) : cities.data[0]);
-  const cityCenter = city ? { lat: city.centerLat, lng: city.centerLng } : null;
-  const point = geo ?? cityCenter;
-
-  const listings = useQuery({
-    queryKey: ['listings', { q: deferredQ, sort, point, radiusKm }],
-    queryFn: () =>
-      searchListings({ ...point, radiusKm, q: deferredQ || undefined, sort, limit: PAGE_SIZE }),
-    enabled: point !== null || cities.isError,
+  const categories = useQuery({
+    queryKey: ['categories', { point, radiusKm }],
+    queryFn: () => getCategories(point, radiusKm),
+    enabled: ready,
     placeholderData: keepPreviousData,
   });
 
-  const nothingNearby =
-    geo !== null && !listings.isPlaceholderData && listings.data?.data.length === 0;
-
-  const cityListings = useQuery({
-    queryKey: ['listings', { q: deferredQ, sort, point: cityCenter, radiusKm: CITY_RADIUS_KM }],
-    queryFn: () =>
-      searchListings({
-        ...cityCenter,
-        radiusKm: CITY_RADIUS_KM,
-        q: deferredQ || undefined,
-        sort,
-        limit: PAGE_SIZE,
-      }),
-    enabled: nothingNearby && cityCenter !== null,
+  const near = useQuery({
+    queryKey: ['listings', 'near', { point, radiusKm, sort }],
+    queryFn: () => searchListings({ ...point, radiusKm, sort, limit: NEAR_LIMIT }),
+    enabled: ready,
+    placeholderData: keepPreviousData,
   });
 
-  const showCityFallback = nothingNearby && cityCenter !== null;
-  const activeQuery = showCityFallback ? cityListings : listings;
+  const cityCenter = city ? { lat: city.centerLat, lng: city.centerLng } : null;
+  const nothingNearby =
+    isPrecise && cityCenter !== null && !near.isPlaceholderData && near.data?.meta.total === 0;
+
+  const cityListings = useQuery({
+    queryKey: ['listings', 'near-city', { cityCenter, sort }],
+    queryFn: () =>
+      searchListings({ ...cityCenter, radiusKm: CITY_RADIUS_KM, sort, limit: NEAR_LIMIT }),
+    enabled: nothingNearby,
+  });
+
+  const shown = nothingNearby ? cityListings : near;
+  const rawItems = shown.data?.data ?? [];
   const items =
-    showCityFallback && geo && cityListings.data
-      ? withDistanceFrom(cityListings.data.data, geo, sort)
-      : activeQuery.data?.data;
+    nothingNearby && point ? withDistanceFrom(rawItems, point, sort === 'distance') : rawItems;
+  const total = shown.data?.meta.total ?? 0;
+  const sortedCategories = [...(categories.data ?? [])].sort(
+    (a, b) => (b.activeListings ?? 0) - (a.activeListings ?? 0),
+  );
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    const query = q.trim();
+    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  }
 
   return (
-    <Container component="main" sx={{ py: 3 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Смачне поруч зі знижкою
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {geo ? 'Набори поблизу вас' : city ? `Набори в місті ${city.name}` : 'Набори від закладів'}
-      </Typography>
+    <main>
+      <PageContainer sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 3, md: 3 } }}>
+        <SearchCard role="search" onSubmit={submitSearch}>
+          <SearchInput>
+            <SearchIcon aria-hidden />
+            <InputBase
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={ua.home.searchPlaceholder}
+              inputProps={{ 'aria-label': ua.home.searchShort }}
+            />
+          </SearchInput>
+          <DesktopActions>
+            <LocationChip variant="button" />
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{ bgcolor: 'primary.dark', px: 3, py: 1.5 }}
+              endIcon={<ArrowForwardIcon />}
+            >
+              {ua.home.findButton}
+            </Button>
+          </DesktopActions>
+        </SearchCard>
+      </PageContainer>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
-        <TextField
-          label="Пошук"
-          placeholder="Випічка, суші, назва закладу"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          select
-          label="Радіус"
-          value={radiusKm}
-          onChange={(e) => setRadiusKm(Number(e.target.value))}
-          sx={{ minWidth: 140 }}
-        >
-          {RADIUS_OPTIONS_KM.map((km) => (
-            <MenuItem key={km} value={km}>
-              {km} км
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
-          label="Сортування"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as ListingSort)}
-          sx={{ minWidth: 220 }}
-        >
-          {Object.entries(SORT_LABELS).map(([value, label]) => (
-            <MenuItem key={value} value={value}>
-              {label}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Stack>
+      <PageContainer>
+        <Section>
+          <HeroOffer
+            listing={hero.data?.data[0] ?? null}
+            loading={!ready || (hero.isPending && hero.fetchStatus !== 'idle')}
+          />
+        </Section>
 
-      {activeQuery.isError && <Alert severity="error">{errorMessage(activeQuery.error)}</Alert>}
+        <Section aria-labelledby="categories-title">
+          <SectionHeading
+            title={ua.home.categoriesTitle}
+            subtitle={ua.home.categoriesSubtitle}
+            size="medium"
+          />
+          <CategoryTiles categories={sortedCategories} loading={!ready || categories.isPending} />
+        </Section>
 
-      {showCityFallback && city && (cityListings.data?.data.length ?? 0) > 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          У радіусі {radiusKm} км від вас наборів немає. Показуємо набори в місті {city.name}.
-        </Alert>
-      )}
+        <Section>
+          <SectionHeading
+            overline={ua.home.nearOverline}
+            title={ua.home.nearTitle}
+            action={
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                <FilterChips
+                  label={ua.catalog.sort}
+                  value={sort}
+                  options={NEAR_SORTS}
+                  onChange={setSort}
+                />
+                <Button
+                  component={Link}
+                  href={`/search?sort=${sort}`}
+                  endIcon={<ArrowForwardIcon />}
+                >
+                  {ua.common.all(total)}
+                </Button>
+              </div>
+            }
+          />
+          {nothingNearby && items.length > 0 && city && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              {ua.home.nothingNearby(radiusKm, city.name)}
+            </Alert>
+          )}
+          {shown.isError && <Alert severity="error">{errorMessage(shown.error)}</Alert>}
+          {!ready || shown.isPending ? (
+            <ListingGridSkeleton />
+          ) : items.length > 0 ? (
+            <ListingGrid listings={items} compactOnMobile />
+          ) : (
+            <EmptyState
+              icon={<StorefrontOutlinedIcon />}
+              title={ua.home.emptyTitle}
+              text={ua.home.emptyText}
+              action={
+                <Button component={Link} href="/location" variant="contained">
+                  {ua.home.changeLocation}
+                </Button>
+              }
+            />
+          )}
+        </Section>
 
-      <Grid container spacing={2}>
-        {activeQuery.isPending
-          ? Array.from({ length: 6 }, (_, i) => (
-              <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Skeleton variant="rounded" height={320} />
-              </Grid>
-            ))
-          : items?.map((listing) => (
-              <Grid key={listing.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <ListingCard listing={listing} />
-              </Grid>
-            ))}
-      </Grid>
-
-      {items?.length === 0 && (
-        <Typography color="text.secondary" sx={{ mt: 4, textAlign: 'center' }}>
-          Поруч поки немає наборів. Спробуйте змінити пошук або загляньте пізніше.
-        </Typography>
-      )}
-    </Container>
+        <Section>
+          <EcoBanner>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <EcoIcon aria-hidden>
+                <SpaOutlinedIcon />
+              </EcoIcon>
+              <div>
+                <Typography variant="h3" component="h2" sx={{ color: 'primary.dark' }}>
+                  {ua.home.ecoTitle}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {ua.home.ecoText}
+                </Typography>
+              </div>
+            </div>
+            <Button
+              component={Link}
+              href={user ? '/search' : '/register'}
+              endIcon={<ArrowForwardIcon />}
+              sx={{ color: 'success.main' }}
+            >
+              {ua.home.ecoCta}
+            </Button>
+          </EcoBanner>
+        </Section>
+      </PageContainer>
+    </main>
   );
 }

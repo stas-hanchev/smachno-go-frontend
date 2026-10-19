@@ -1,4 +1,11 @@
-import { formatDistance, formatPickupWindow, formatPrice } from '@/lib/format';
+import {
+  formatCountdown,
+  formatDistance,
+  formatPickupWindow,
+  formatPrice,
+  kyivWeekday,
+} from '@/lib/format';
+import { plural } from '@/lib/plural';
 
 describe('formatPrice', () => {
   it('drops zero cents and keeps others', () => {
@@ -31,5 +38,33 @@ describe('formatPickupWindow', () => {
     expect(formatPickupWindow('2026-10-20T17:00:00Z', '2026-10-20T18:00:00Z', now)).toBe(
       '20.10 20:00–21:00',
     );
+  });
+});
+
+describe('formatCountdown', () => {
+  it('formats minutes and seconds and never goes negative', () => {
+    expect(formatCountdown(600_000)).toBe('10:00');
+    expect(formatCountdown(61_500)).toBe('01:02');
+    expect(formatCountdown(-5)).toBe('00:00');
+  });
+});
+
+describe('plural', () => {
+  it('follows Ukrainian plural rules', () => {
+    const word = (n: number) => plural(n, 'набір', 'набори', 'наборів');
+    expect(word(1)).toBe('набір');
+    expect(word(3)).toBe('набори');
+    expect(word(5)).toBe('наборів');
+    expect(word(11)).toBe('наборів');
+    expect(word(22)).toBe('набори');
+    expect(word(101)).toBe('набір');
+  });
+});
+
+describe('kyivWeekday', () => {
+  it('returns 1 for Monday and 7 for Sunday in Kyiv time', () => {
+    expect(kyivWeekday(new Date('2026-10-19T09:00:00Z'))).toBe(1);
+    expect(kyivWeekday(new Date('2026-10-18T22:30:00Z'))).toBe(1);
+    expect(kyivWeekday(new Date('2026-10-18T12:00:00Z'))).toBe(7);
   });
 });

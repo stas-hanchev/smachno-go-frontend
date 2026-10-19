@@ -1,23 +1,35 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Manrope } from 'next/font/google';
 import type { ReactNode } from 'react';
-import { AppHeader } from '@/components/AppHeader';
+import { AppShell } from '@/components/layout/AppShell';
+import { ua } from '@/i18n/ua';
+import { publicEnv } from '@/lib/env';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-sans' });
+const manrope = Manrope({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
+});
+
+const BRAND = `${ua.brand.first}${ua.brand.second}`;
 
 export const metadata: Metadata = {
-  title: { default: 'СмачноGo', template: '%s · СмачноGo' },
-  description: 'Смачна їжа зі знижкою від закладів поруч, замість того щоб її викинули.',
+  metadataBase: new URL(publicEnv.siteUrl),
+  title: { default: BRAND, template: `%s · ${BRAND}` },
+  description: ua.meta.description,
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0F5C56',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="uk" className={inter.variable}>
+    <html lang="uk" className={manrope.variable}>
       <body>
         <Providers>
-          <AppHeader />
-          {children}
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
