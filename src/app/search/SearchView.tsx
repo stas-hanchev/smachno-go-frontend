@@ -204,7 +204,7 @@ export function SearchView() {
               <ListingGridSkeleton count={6} columns={3} />
             ) : items.length > 0 ? (
               <>
-                <ListingGrid listings={items} columns={3} />
+                <ListingGrid listings={items} columns={3} source="search" />
                 {results.hasNextPage && (
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
                     <Button

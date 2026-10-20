@@ -54,6 +54,19 @@ export function dayLabel(iso: string, now = new Date()) {
   return `${date}.${month}`;
 }
 
+export function kyivDateString(offsetDays = 0, now = new Date()) {
+  return dayFormat.format(new Date(now.getTime() + offsetDays * 86_400_000));
+}
+
+export function formatDate(isoDate: string) {
+  const [year, month, day] = isoDate.split('-');
+  return `${day}.${month}.${year}`;
+}
+
+export function formatTimeRange(startIso: string, endIso: string) {
+  return `${formatTime(startIso)}–${formatTime(endIso)}`;
+}
+
 export function formatPickupWindow(startIso: string, endIso: string, now = new Date()) {
   return `${dayLabel(startIso, now)} ${formatTime(startIso)}–${formatTime(endIso)}`;
 }

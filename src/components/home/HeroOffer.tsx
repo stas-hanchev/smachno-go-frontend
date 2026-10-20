@@ -12,6 +12,7 @@ import type { ListingCard } from '@/api/types';
 import { PillBadge } from '@/components/ui/Badges';
 import { ua } from '@/i18n/ua';
 import { formatPickupWindow } from '@/lib/format';
+import { listingHref } from '@/lib/interactions';
 import { shadows } from '@/theme/theme';
 
 const FALLBACK_IMAGE = '/images/hero-pastry.jpg';
@@ -82,7 +83,15 @@ const DesktopText = styled(Typography, { name: 'SgHeroOffer', slot: 'DesktopText
   }),
 ) as typeof Typography;
 
-export function HeroOffer({ listing, loading }: { listing: ListingCard | null; loading: boolean }) {
+export function HeroOffer({
+  listing,
+  loading,
+  personalized = false,
+}: {
+  listing: ListingCard | null;
+  loading: boolean;
+  personalized?: boolean;
+}) {
   if (loading) {
     return (
       <Skeleton variant="rounded" sx={{ borderRadius: '24px', height: { xs: 220, md: 380 } }} />
@@ -112,7 +121,7 @@ export function HeroOffer({ listing, loading }: { listing: ListingCard | null; l
       <Content>
         <PillBadge>
           <BoltIcon aria-hidden />
-          {ua.home.heroTag}
+          {personalized ? ua.home.heroTagPersonal : ua.home.heroTag}
         </PillBadge>
         <Typography variant="h1" component="h1">
           −{listing.discountPercent}% · {listing.offer.title}
@@ -127,7 +136,7 @@ export function HeroOffer({ listing, loading }: { listing: ListingCard | null; l
         <Actions>
           <Cta
             component={Link}
-            href={`/listings/${listing.id}`}
+            href={listingHref(listing.id, 'recommendation')}
             size="large"
             endIcon={<ArrowForwardIcon />}
           >

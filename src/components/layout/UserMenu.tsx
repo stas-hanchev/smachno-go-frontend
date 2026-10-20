@@ -8,7 +8,9 @@ import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { listMyVenues } from '@/api/partner';
 import { useLogout } from '@/hooks/useLogout';
 import { ua } from '@/i18n/ua';
 import { initials } from '@/lib/user';
@@ -19,6 +21,14 @@ export function UserMenu() {
   const ready = useSessionStore((s) => s.ready);
   const logout = useLogout();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const venues = useQuery({
+    queryKey: ['partner', 'venues'],
+    queryFn: listMyVenues,
+    enabled: Boolean(user),
+    staleTime: 300_000,
+  });
+  const hasVenues = (venues.data?.length ?? 0) > 0;
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   if (!ready) return null;
   if (!user) {
@@ -70,6 +80,17 @@ export function UserMenu() {
         <MenuItem component={Link} href="/profile/settings">
           {ua.nav.settings}
         </MenuItem>
+        {(hasVenues || isAdmin) && <Divider />}
+        {hasVenues && (
+          <MenuItem component={Link} href="/partner">
+            {ua.nav.partnerCabinet}
+          </MenuItem>
+        )}
+        {isAdmin && (
+          <MenuItem component={Link} href="/admin">
+            {ua.nav.adminPanel}
+          </MenuItem>
+        )}
         <Divider />
         <MenuItem onClick={() => void logout()}>{ua.nav.logout}</MenuItem>
       </Menu>

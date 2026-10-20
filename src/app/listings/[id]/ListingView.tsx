@@ -15,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import { styled } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
+import { useEffect } from 'react';
 import { getListing, getNearbyListings } from '@/api/catalog';
 import type { ListingDetails } from '@/api/types';
 import { TAB_BAR_HEIGHT } from '@/components/layout/MobileTabBar';
@@ -30,6 +31,7 @@ import { SectionHeading } from '@/components/ui/SectionHeading';
 import { useSearchArea } from '@/hooks/useSearchArea';
 import { ua } from '@/i18n/ua';
 import { mapsEnabled } from '@/lib/env';
+import { interactions, type InteractionSource } from '@/lib/interactions';
 import { withDistanceFrom } from '@/lib/geo';
 import { directionsUrl, formatDistance, formatPickupWindow } from '@/lib/format';
 import { shadows } from '@/theme/theme';
@@ -202,9 +204,11 @@ const PhoneCard = styled('a', { name: 'SgListingView', slot: 'PhoneCard' })(({ t
 export function ListingView({
   id,
   initialListing,
+  source,
 }: {
   id: number;
   initialListing: ListingDetails;
+  source?: InteractionSource;
 }) {
   const { point, ready } = useSearchArea();
   const listing =
@@ -218,6 +222,11 @@ export function ListingView({
   const nearby = useQuery({ queryKey: ['nearby', id], queryFn: () => getNearbyListings(id) });
 
   useListingSubscription([id]);
+
+  const offerId = initialListing.offer.id;
+  useEffect(() => {
+    interactions().track({ type: 'view', offerId, source: source ?? 'direct' });
+  }, [offerId, source]);
 
   const distance = formatDistance(listing.distanceM);
 
@@ -391,7 +400,7 @@ export function ListingView({
             </Column>
 
             <div id="booking" style={{ scrollMarginTop: 96 }}>
-              <BookingCard listing={listing} />
+              <BookingCard listing={listing} source={source} />
               {listing.venue.phone && (
                 <PhoneCard href={`tel:${listing.venue.phone}`}>
                   <PhoneOutlinedIcon aria-hidden />

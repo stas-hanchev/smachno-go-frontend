@@ -18,6 +18,7 @@ import { PriceTag } from '@/components/ui/PriceTag';
 import { ShareTextButton } from '@/components/ui/ShareButton';
 import { useBookListing } from '@/hooks/useBookListing';
 import { ua } from '@/i18n/ua';
+import { orderSourceOf, type InteractionSource } from '@/lib/interactions';
 import { formatPickupWindow, formatPrice } from '@/lib/format';
 import { notify } from '@/stores/notify';
 import { useSessionStore } from '@/stores/session';
@@ -55,10 +56,16 @@ const Block = styled('div', { name: 'SgBookingCard', slot: 'Block' })(({ theme }
   '& > svg': { color: theme.palette.success.main, flexShrink: 0, marginTop: 2 },
 }));
 
-export function BookingCard({ listing }: { listing: ListingDetails }) {
+export function BookingCard({
+  listing,
+  source,
+}: {
+  listing: ListingDetails;
+  source?: InteractionSource;
+}) {
   const user = useSessionStore((s) => s.user);
   const [quantity, setQuantity] = useState(1);
-  const { book, pending, error } = useBookListing(listing.id);
+  const { book, pending, error } = useBookListing(listing.id, orderSourceOf(source));
   const resend = useMutation({
     mutationFn: resendVerifyEmail,
     onSuccess: () => notify.success(ua.auth.resent),

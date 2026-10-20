@@ -9,6 +9,7 @@ import { DiscountBadge, Dot } from '@/components/ui/Badges';
 import { ListingPhoto } from '@/components/ui/PhotoPlaceholder';
 import { ua } from '@/i18n/ua';
 import { formatDistance, formatPickupWindow, formatPrice } from '@/lib/format';
+import { listingHref, type InteractionSource } from '@/lib/interactions';
 import { shadows } from '@/theme/theme';
 
 const Row = styled(RouterLink, { name: 'SgListingRow', slot: 'Row' })(({ theme }) => ({
@@ -59,10 +60,18 @@ const Meta = styled('div', { name: 'SgListingRow', slot: 'Meta' })(({ theme }) =
   '& svg': { fontSize: 16 },
 }));
 
-export function ListingRow({ listing }: { listing: ListingCard }) {
+export function ListingRow({
+  listing,
+  source,
+  trackRef,
+}: {
+  listing: ListingCard;
+  source?: InteractionSource;
+  trackRef?: (element: Element | null) => void;
+}) {
   const distance = formatDistance(listing.distanceM);
   return (
-    <Row href={`/listings/${listing.id}`}>
+    <Row href={listingHref(listing.id, source)} ref={trackRef}>
       <Thumb>
         <ListingPhoto
           src={listing.offer.photoUrl}

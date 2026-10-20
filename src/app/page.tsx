@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { getCategories, searchListings } from '@/api/catalog';
+import { getDailyOffer, getRecommendations } from '@/api/recommendations';
 import { errorMessage } from '@/api/client';
 import type { ListingSort } from '@/api/types';
 import { CategoryTiles } from '@/components/home/CategoryTiles';
@@ -32,6 +33,7 @@ import { shadows } from '@/theme/theme';
 
 const CITY_RADIUS_KM = 30;
 const NEAR_LIMIT = 8;
+const FOR_YOU_LIMIT = 4;
 
 type NearSort = Extract<ListingSort, 'distance' | 'rating' | 'discount'>;
 
@@ -109,8 +111,14 @@ export default function HomePage() {
   const [sort, setSort] = useState<NearSort>('distance');
 
   const hero = useQuery({
-    queryKey: ['listings', 'hero', { point, radiusKm }],
-    queryFn: () => searchListings({ ...point, radiusKm, sort: 'discount', limit: 1 }),
+    queryKey: ['recommendations', 'daily', { point, radiusKm }],
+    queryFn: () => getDailyOffer(point!, radiusKm),
+    enabled: ready,
+  });
+
+  const forYou = useQuery({
+    queryKey: ['recommendations', 'list', { point, radiusKm }],
+    queryFn: () => getRecommendations(point!, radiusKm),
     enabled: ready,
   });
 
@@ -184,10 +192,31 @@ export default function HomePage() {
       <PageContainer>
         <Section>
           <HeroOffer
-            listing={hero.data?.data[0] ?? null}
+            listing={hero.data?.listing ?? null}
+            personalized={hero.data?.personalized ?? false}
             loading={!ready || (hero.isPending && hero.fetchStatus !== 'idle')}
           />
         </Section>
+
+        {forYou.data && forYou.data.data.length > 0 && (
+          <Section>
+            <SectionHeading
+              overline={ua.forYou.overline}
+              title={ua.forYou.title}
+              subtitle={ua.forYou.subtitle}
+              action={
+                <Button component={Link} href="/for-you" endIcon={<ArrowForwardIcon />}>
+                  {ua.forYou.all}
+                </Button>
+              }
+            />
+            <ListingGrid
+              listings={forYou.data.data.slice(0, FOR_YOU_LIMIT)}
+              compactOnMobile
+              source="recommendation"
+            />
+          </Section>
+        )}
 
         <Section aria-labelledby="categories-title">
           <SectionHeading
@@ -229,7 +258,7 @@ export default function HomePage() {
           {!ready || shown.isPending ? (
             <ListingGridSkeleton />
           ) : items.length > 0 ? (
-            <ListingGrid listings={items} compactOnMobile />
+            <ListingGrid listings={items} compactOnMobile source="home" />
           ) : (
             <EmptyState
               icon={<StorefrontOutlinedIcon />}

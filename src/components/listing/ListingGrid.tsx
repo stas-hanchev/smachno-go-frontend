@@ -4,6 +4,8 @@ import Skeleton from '@mui/material/Skeleton';
 import { styled } from '@mui/material/styles';
 import type { ListingCard as ListingCardData } from '@/api/types';
 import { useListingSubscription } from '@/components/providers/RealtimeProvider';
+import { useImpressions } from '@/hooks/useImpressions';
+import type { InteractionSource } from '@/lib/interactions';
 import { ListingCard } from './ListingCard';
 import { ListingRow } from './ListingRow';
 
@@ -41,19 +43,30 @@ export function ListingGrid({
   columns = 4,
   compactOnMobile = false,
   heading = 'venue',
+  source,
 }: {
   listings: ListingCardData[];
   columns?: number;
   compactOnMobile?: boolean;
   heading?: 'venue' | 'offer';
+  source?: InteractionSource;
 }) {
   useListingSubscription(listings.map((l) => l.id));
+  const track = useImpressions(source ?? 'direct');
+  const trackRef = (listing: ListingCardData, index: number) =>
+    source ? track(listing.offer.id, index) : undefined;
 
   if (!compactOnMobile) {
     return (
       <CardGrid $columns={columns}>
-        {listings.map((listing) => (
-          <ListingCard key={listing.id} listing={listing} heading={heading} />
+        {listings.map((listing, index) => (
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            heading={heading}
+            source={source}
+            trackRef={trackRef(listing, index)}
+          />
         ))}
       </CardGrid>
     );
@@ -61,13 +74,24 @@ export function ListingGrid({
   return (
     <>
       <RowsOnMobile>
-        {listings.map((listing) => (
-          <ListingRow key={listing.id} listing={listing} />
+        {listings.map((listing, index) => (
+          <ListingRow
+            key={listing.id}
+            listing={listing}
+            source={source}
+            trackRef={trackRef(listing, index)}
+          />
         ))}
       </RowsOnMobile>
       <GridFromTablet $columns={columns}>
-        {listings.map((listing) => (
-          <ListingCard key={listing.id} listing={listing} heading={heading} />
+        {listings.map((listing, index) => (
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            heading={heading}
+            source={source}
+            trackRef={trackRef(listing, index)}
+          />
         ))}
       </GridFromTablet>
     </>

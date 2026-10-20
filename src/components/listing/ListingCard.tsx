@@ -14,6 +14,7 @@ import { ListingPhoto } from '@/components/ui/PhotoPlaceholder';
 import { PriceTag } from '@/components/ui/PriceTag';
 import { ua } from '@/i18n/ua';
 import { dayLabel, formatDistance, formatTime } from '@/lib/format';
+import { listingHref, type InteractionSource } from '@/lib/interactions';
 import { shadows } from '@/theme/theme';
 
 const Card = styled('article', { name: 'SgListingCard', slot: 'Card' })<{ $muted: boolean }>(
@@ -151,17 +152,21 @@ const Raised = styled('div', { name: 'SgListingCard', slot: 'Raised' })({
 export function ListingCard({
   listing,
   heading = 'venue',
+  source,
+  trackRef,
 }: {
   listing: ListingCardData;
   heading?: 'venue' | 'offer';
+  source?: InteractionSource;
+  trackRef?: (element: Element | null) => void;
 }) {
   const soldOut = listing.quantityLeft === 0 || listing.status !== 'on_sale';
   const distance = formatDistance(listing.distanceM);
-  const href = `/listings/${listing.id}`;
+  const href = listingHref(listing.id, source);
   const day = dayLabel(listing.pickupStart);
 
   return (
-    <Card $muted={soldOut}>
+    <Card $muted={soldOut} ref={trackRef}>
       <Media>
         <ListingPhoto
           src={listing.offer.photoUrl}

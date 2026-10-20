@@ -285,7 +285,7 @@ export function VenueView({
           subtitle={ua.venue.setsSubtitle}
         />
         {listings.length > 0 ? (
-          <ListingGrid listings={listings} columns={3} heading="offer" />
+          <ListingGrid listings={listings} columns={3} heading="offer" source="venue" />
         ) : (
           <EmptyState
             icon={<InfoOutlinedIcon />}

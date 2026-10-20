@@ -28,6 +28,11 @@ export async function getTags() {
   return data;
 }
 
+export async function getAllergens() {
+  const { data } = await api.get<Tag[]>('/allergens');
+  return data;
+}
+
 export async function searchListings(search: ListingSearch) {
   const { data } = await api.get<Paginated<ListingCard>>('/listings', {
     params: search,

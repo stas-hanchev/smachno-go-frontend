@@ -4,7 +4,8 @@ Web app for SmachnoGo. Specification: TZ 1.1 (`smachnogo-tz.md` in the workspace
 «СмачноGo» (mobile 412×917 and desktop 1280 frames).
 
 Stack: Next.js 16 (App Router), React 19, TypeScript (strict), MUI 9 on the styled-components engine,
-TanStack Query, axios, Formik + Yup, Zustand, socket.io-client, Mapbox (`mapbox-gl` + `react-map-gl`), `qrcode.react`.
+TanStack Query, axios, Formik + Yup, Zustand, socket.io-client, Mapbox (`mapbox-gl` + `react-map-gl`), `qrcode.react`,
+`@zxing/browser` (QR scanning in the partner cabinet).
 Font: Manrope (`next/font/google`).
 
 ## Quick start
@@ -44,10 +45,14 @@ Without the Mapbox token `/map` shows venues as a list and `/location` offers ge
 | `npm test`                                            | Vitest + Testing Library, jsdom                 |
 | `npm run test:e2e`                                    | Playwright, mobile 412×917 and desktop 1280×800 |
 
-The e2e test registers a new user, reads the verification email from MailHog (`E2E_MAILHOG_URL`, default
-`http://localhost:8025`), books a set and pays with the test provider. It needs the API with
-`PAYMENT_PROVIDER=fake`, the dev server and fresh seed data; run `npx playwright install chromium` once.
-The API allows 5 registrations per hour per IP (in memory), so restart the API between frequent runs.
+Two e2e tests run against the API with `PAYMENT_PROVIDER=fake` (or `ALLOW_FAKE_PAYMENTS=true`), the dev
+server and fresh seed data; run `npx playwright install chromium` once.
+
+- `buyer-flow.spec.ts` registers a new user, reads the verification email from MailHog (`E2E_MAILHOG_URL`, default
+  `http://localhost:8025`), books a set and pays with the test provider. The API allows 5 registrations per hour
+  per IP (in memory), so restart the API between frequent runs.
+- `partner-pickup.spec.ts` buys a set as the seeded buyer (`customer@smachnogo.local`), then signs in as the seeded
+  partner (`partner@smachnogo.local`), opens `/partner/pickup` for that venue and hands the order out by its code.
 
 ## Structure
 
@@ -55,11 +60,11 @@ The API allows 5 registrations per hour per IP (in memory), so restart the API b
 src/
   app/            # routes (see below), layout, providers
   api/            # axios client with token refresh, endpoint functions, server-side fetch, API types
-  components/     # layout (header, tab bar, footer), listing, orders, maps, auth, profile, ui
-  hooks/          # search area, booking, countdown, login redirect
+  components/     # layout, listing, orders, maps, auth, profile, partner (cabinet), admin, ui
+  hooks/          # search area, booking, countdown, login redirect, impressions, dictionaries
   i18n/ua.ts      # every UI text
-  lib/            # formatting (Kyiv time, money, distance), filters <-> URL, geo, styled-components registry
-  stores/         # Zustand: session, location (persisted), notifications
+  lib/            # formatting (Kyiv time, money, distance), filters <-> URL, geo, interactions, partner stats
+  stores/         # Zustand: session, location (persisted), notifications, partner (selected venue, sound)
   theme/          # MUI theme with the design tokens from TZ 10.2
 test/             # Vitest
 e2e/              # Playwright
@@ -71,10 +76,32 @@ client (no hydration mismatch) and stops `sx` from reaching the DOM.
 
 ## Routes
 
-`/`, `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/location`, `/search`,
-`/map`, `/venues/[slug]` (SSR), `/listings/[id]` (SSR), `/checkout/[publicId]`, `/orders`,
+Buyer: `/`, `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/location`, `/search`,
+`/map`, `/for-you`, `/venues/[slug]` (SSR), `/listings/[id]` (SSR), `/checkout/[publicId]`, `/orders`,
 `/orders/[publicId]`, `/orders/[publicId]/success`, `/favorites`, `/profile`, `/profile/settings`,
 `/profile/notifications`.
+
+Business: `/for-business` (landing page and partner application; a guest registers in the same form),
+`/partner/invite?token=` (accept a team invitation).
+
+Partner cabinet (`app/partner/(cabinet)`, a venue member only): `/partner` (today: stats, listings, quantity
+and closing), `/partner/pickup` (QR scan or 6-character code), `/partner/orders`, `/partner/offers`,
+`/partner/onboarding` (profile, location, legal data, photos, hours, activation), `/partner/settings/venue`,
+`/partner/settings/team`. New orders arrive over Socket.io (`venue:subscribe`) with a notification and a chime.
+
+Admin panel (`super_admin` only): `/admin/applications`, `/admin/venues`, `/admin/users`, `/admin/orders`
+(details and refunds), `/admin/dictionaries`, `/admin/settings` (business settings and recommendation weights),
+`/admin/audit-log`.
+
+Cabinet pages render without the footer and the buyer tab bar. A signed-in user without access sees a 403 page.
+
+## Recommendations and interactions
+
+The home hero comes from `/recommendations/daily`, the «Для тебе сьогодні» section and `/for-you` from
+`/recommendations`. Cards report impressions (50% visible, once per offer and source), set pages report views,
+and bookings carry `source`. Events are batched (`lib/interactions.ts`, up to 50 events or every 4 s, flushed
+on `pagehide` with `keepalive`) and sent to `/interactions` with an anonymous ULID (`sg-anon-id` in
+`localStorage`). Links from a section add `?from=<source>`, so a view and an order keep the source.
 
 ## Decisions that differ from TZ 1.1
 
@@ -85,9 +112,10 @@ client (no hydration mismatch) and stops `sx` from reaching the DOM.
   `/api/v1/auth`, so the Next.js server never sees it. The API checks access anyway.
 - Catalog filters live in the URL (`lib/catalog-filters.ts`) instead of a `useFiltersStore`.
 - The home page is client-rendered because it depends on the stored location; venue and set pages are SSR.
-- The home hero shows the biggest discount nearby instead of «Пропозиція дня» until recommendations exist.
+- Admin tables use MUI `Table` with server-side pagination instead of MUI X `DataGrid`: DataGrid needs the Emotion
+  engine, and the app runs MUI on styled-components.
+- Payments use the test provider until LiqPay is connected.
 
-## Not done yet (step 3)
+## Not done yet
 
-Partner cabinet and `/for-business`, admin panel, `/for-you` recommendations, `/terms` and `/privacy`,
-photo uploads (cards show category placeholders), web push.
+`/terms` and `/privacy`, web push.

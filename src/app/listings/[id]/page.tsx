@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchListing } from '@/api/server';
+import { isInteractionSource } from '@/lib/interactions';
 import { ListingView } from './ListingView';
 
 function parseId(raw: string) {
@@ -26,9 +27,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ListingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   const id = parseId((await params).id);
   const listing = id ? await fetchListing(id) : null;
   if (!id || !listing) notFound();
-  return <ListingView id={id} initialListing={listing} />;
+  const from = (await searchParams).from;
+  const source = isInteractionSource(from) ? from : undefined;
+  return <ListingView id={id} initialListing={listing} source={source} />;
 }

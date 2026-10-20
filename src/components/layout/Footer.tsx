@@ -82,6 +82,7 @@ export function Footer() {
             <FooterLink href="/">{ua.nav.home}</FooterLink>
             <FooterLink href="/search">{ua.nav.venues}</FooterLink>
             <FooterLink href="/map">{ua.nav.map}</FooterLink>
+            <FooterLink href="/for-business">{ua.nav.forBusiness}</FooterLink>
           </Column>
           <Column aria-label={ua.footer.account}>
             <Typography variant="subtitle2">{ua.footer.account}</Typography>

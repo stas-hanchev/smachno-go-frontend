@@ -8,3 +8,8 @@ export function safeNextPath(next: string | null | undefined, fallback = '/') {
   }
   return next;
 }
+
+export function isCabinetPath(pathname: string) {
+  if (pathname.startsWith('/partner/invite')) return false;
+  return isActivePath(pathname, '/partner') || isActivePath(pathname, '/admin');
+}

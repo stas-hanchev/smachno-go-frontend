@@ -282,3 +282,274 @@ export interface ListingUpdate {
   quantityTotal: number;
   status: string;
 }
+
+export type VenueStatus = 'draft' | 'active' | 'paused' | 'blocked';
+export type MemberRole = 'owner' | 'staff';
+export type OfferStatus = 'active' | 'paused' | 'archived';
+export type ListingStatus = 'scheduled' | 'on_sale' | 'sold_out' | 'closed' | 'cancelled';
+export type ApplicationStatus = 'submitted' | 'approved' | 'rejected';
+
+export interface PartnerVenue {
+  id: number;
+  slug: string;
+  name: string;
+  address: string;
+  status: VenueStatus;
+  role: MemberRole;
+}
+
+export interface VenueProfile {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: { id: number; name: string };
+  city: { id: number; name: string };
+  address: string;
+  lat: number;
+  lng: number;
+  phone: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  photos: { id: number; url: string; sortOrder: number }[];
+  legalName: string;
+  taxId: string;
+  iban: string;
+  commissionRate: number;
+  status: VenueStatus;
+  hours: VenueHours[];
+  closures: { id: number; date: string; reason: string | null }[];
+  activation: { ready: boolean; missing: { field: string; message: string }[] };
+}
+
+export interface PartnerOffer {
+  id: number;
+  venueId: number;
+  title: string;
+  description: string | null;
+  photoUrl: string | null;
+  category: { id: number; name: string };
+  originalPrice: string;
+  price: string;
+  estWeightKg: number;
+  maxPerOrder: number;
+  status: OfferStatus;
+  tags: { id: number; name: string }[];
+  allergens: { id: number; name: string }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OfferInput {
+  title: string;
+  description?: string | null;
+  categoryId: number;
+  originalPrice: number;
+  price: number;
+  estWeightKg?: number;
+  maxPerOrder?: number;
+  tagIds?: number[];
+  allergenIds?: number[];
+}
+
+export interface PartnerListing {
+  id: number;
+  offerId: number;
+  offerTitle: string;
+  pickupDate: string;
+  pickupStart: string;
+  pickupEnd: string;
+  price: string;
+  originalPrice: string;
+  discountPercent: number;
+  quantityTotal: number;
+  quantityLeft: number;
+  quantitySold: number;
+  status: ListingStatus;
+  source: string;
+  cancelReason: string | null;
+}
+
+export interface VenueOrder {
+  publicId: string;
+  status: OrderStatus;
+  customerName: string;
+  offerTitle: string;
+  listingId: number;
+  quantity: number;
+  totalAmount: string;
+  pickupDate: string;
+  pickupStart: string;
+  pickupEnd: string;
+  voucherCode: string | null;
+  voucherValidUntil: string | null;
+  pickedUpAt: string | null;
+  createdAt: string;
+}
+
+export interface TeamMember {
+  userId: number;
+  email: string;
+  firstName: string;
+  lastName: string | null;
+  role: MemberRole;
+  status: 'invited' | 'active' | 'disabled';
+  createdAt: string;
+}
+
+export interface TeamInvite {
+  id: number;
+  email: string | null;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface PartnerApplication {
+  id: number;
+  userId: number;
+  businessName: string;
+  venueType: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail: string;
+  address: string;
+  legalName: string;
+  taxId: string;
+  iban: string;
+  venuesCount: number;
+  status: ApplicationStatus;
+  rejectReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+export interface ApplicationInput {
+  businessName: string;
+  venueType: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail: string;
+  address: string;
+  legalName: string;
+  taxId: string;
+  iban: string;
+  venuesCount?: number;
+}
+
+export interface AdminApplicationDetails extends PartnerApplication {
+  applicant: { id: number; email: string; firstName: string; lastName: string | null };
+  venues: { id: number; name: string; slug: string; status: VenueStatus }[];
+}
+
+export interface AdminVenueRow {
+  id: number;
+  slug: string;
+  name: string;
+  city: string;
+  address: string;
+  status: VenueStatus;
+  commissionRate: number;
+  ratingAvg: string | null;
+  ratingCount: number;
+  createdAt: string;
+}
+
+export interface AdminUserRow extends User {
+  status: 'active' | 'blocked' | 'deleted';
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminOrderRow {
+  publicId: string;
+  status: OrderStatus;
+  customerEmail: string;
+  venue: { id: number; name: string };
+  offerTitle: string;
+  quantity: number;
+  totalAmount: string;
+  voucherCode: string | null;
+  pickupDate: string;
+  pickupStart: string;
+  createdAt: string;
+}
+
+export interface AdminOrderDetails extends Omit<AdminOrderRow, 'customerEmail'> {
+  customer: { id: number; email: string; name: string };
+  listingId: number;
+  unitPrice: string;
+  commissionAmount: string;
+  voucherStatus: string | null;
+  pickupEnd: string;
+  pickedUpAt: string | null;
+  cancelReason: string | null;
+  statusHistory: {
+    from: OrderStatus | null;
+    to: OrderStatus;
+    actorType: string;
+    actorId: number | null;
+    note: string | null;
+    at: string;
+  }[];
+  payments: {
+    id: number;
+    provider: string;
+    providerOrderId: string;
+    amount: string;
+    method: string | null;
+    status: string;
+    paidAt: string | null;
+    createdAt: string;
+    refunds: {
+      id: number;
+      amount: string;
+      reason: string | null;
+      status: string;
+      createdAt: string;
+    }[];
+  }[];
+}
+
+export type DictionaryName = 'categories' | 'tags' | 'allergens' | 'cities';
+
+export interface DictionaryItem {
+  id: number;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  centerLat?: number;
+  centerLng?: number;
+}
+
+export interface BusinessSettings {
+  min_price_ratio: number;
+  reservation_ttl_min: number;
+  cancel_deadline_hours: number;
+  grace_period_min: number;
+  sales_close_offset_min: number;
+  co2_per_kg: number;
+  default_commission_rate: number;
+}
+
+export interface RecommendationWeights {
+  proximity: number;
+  preference: number;
+  popularity: number;
+  rating: number;
+  discount: number;
+  urgency: number;
+  favorite: number;
+}
+
+export interface AuditEntry {
+  id: number;
+  actorId: number | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: number | null;
+  diff: unknown;
+  createdAt: string;
+}
