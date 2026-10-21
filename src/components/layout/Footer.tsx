@@ -55,6 +55,12 @@ const Bottom = styled('div', { name: 'SgFooter', slot: 'Bottom' })({
   paddingTop: 32,
 });
 
+const Legal = styled('nav', { name: 'SgFooter', slot: 'Legal' })({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '8px 20px',
+});
+
 const Motto = styled('span', { name: 'SgFooter', slot: 'Motto' })(({ theme }) => ({
   display: 'inline-flex',
   alignItems: 'center',
@@ -95,6 +101,10 @@ export function Footer() {
           <Typography variant="body2" color="text.secondary">
             {ua.footer.copyright(new Date().getFullYear())}
           </Typography>
+          <Legal aria-label={ua.legal.contents}>
+            <FooterLink href="/terms">{ua.footer.terms}</FooterLink>
+            <FooterLink href="/privacy">{ua.footer.privacy}</FooterLink>
+          </Legal>
           <Motto>
             <SpaOutlinedIcon aria-hidden />
             {ua.footer.motto}

@@ -3,6 +3,7 @@ export const publicEnv = {
   apiOrigin: process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000',
   googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
   mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '',
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@smachnogo.local',
 };
 
 export const mapsEnabled = Boolean(publicEnv.mapboxToken);

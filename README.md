@@ -31,6 +31,7 @@ on start-up and on any 401 the client calls `/auth/refresh` once and retries.
 | `NEXT_PUBLIC_API_ORIGIN`       | API origin for Socket.io (must be in the API `CORS_ORIGINS`)                      |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google sign-in; the button is hidden while empty (the API needs the same id)      |
 | `NEXT_PUBLIC_MAPBOX_TOKEN`     | Public Mapbox token (`pk.…`): `/map`, address search (Geocoding v6), set page map |
+| `NEXT_PUBLIC_SUPPORT_EMAIL`    | Contact email on `/terms` and `/privacy` (default `support@smachnogo.local`)      |
 
 Without the Mapbox token `/map` shows venues as a list and `/location` offers geolocation and the city choice only.
 `NEXT_PUBLIC_*` values are inlined at build time, so restart `npm run dev` after changing them.
@@ -79,7 +80,7 @@ client (no hydration mismatch) and stops `sx` from reaching the DOM.
 Buyer: `/`, `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/location`, `/search`,
 `/map`, `/for-you`, `/venues/[slug]` (SSR), `/listings/[id]` (SSR), `/checkout/[publicId]`, `/orders`,
 `/orders/[publicId]`, `/orders/[publicId]/success`, `/favorites`, `/profile`, `/profile/settings`,
-`/profile/notifications`.
+`/profile/notifications`, `/terms` and `/privacy` (static).
 
 Business: `/for-business` (landing page and partner application; a guest registers in the same form),
 `/partner/invite?token=` (accept a team invitation).
@@ -118,4 +119,4 @@ on `pagehide` with `keepalive`) and sent to `/interactions` with an anonymous UL
 
 ## Not done yet
 
-`/terms` and `/privacy`, web push.
+Web push. The texts of `/terms` and `/privacy` (`legal` in `i18n/ua.ts`) are a draft for a lawyer to review.

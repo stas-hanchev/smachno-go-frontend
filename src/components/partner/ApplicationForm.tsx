@@ -241,9 +241,13 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: () => void }) {
               label={
                 <Typography variant="body2">
                   {ua.auth.acceptTermsPrefix}
-                  <strong>{ua.auth.terms}</strong>
+                  <Link href="/terms" target="_blank" rel="noopener">
+                    {ua.auth.terms}
+                  </Link>
                   {ua.auth.and}
-                  <strong>{ua.auth.privacy}</strong>
+                  <Link href="/privacy" target="_blank" rel="noopener">
+                    {ua.auth.privacy}
+                  </Link>
                 </Typography>
               }
             />
