@@ -39,8 +39,8 @@ test('buyer registers, verifies email, books a set and gets a QR voucher', async
   await page.getByLabel('Пароль', { exact: true }).fill('Test12345!');
   await page.getByLabel('Підтвердження').fill('Test12345!');
   await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Зареєструватися' }).click();
-  await expect(page).toHaveURL('/');
+  await page.getByRole('button', { name: 'Зареєструватися', exact: true }).click();
+  await expect(page).toHaveURL('/', { timeout: 15_000 });
 
   const link = new URL(await verificationLink(request, email));
   await page.goto(`${link.pathname}${link.search}`);
@@ -55,7 +55,7 @@ test('buyer registers, verifies email, books a set and gets a QR voucher', async
   const firstCard = page.locator('article').first();
   await expect(firstCard).toBeVisible();
   await firstCard.getByRole('link').first().click();
-  await expect(page).toHaveURL(/\/listings\/\d+$/);
+  await expect(page).toHaveURL(/\/listings\/\d+(\?|$)/);
 
   await page.getByRole('button', { name: /^Забронювати за/ }).click();
   await expect(page).toHaveURL(/\/checkout\//);

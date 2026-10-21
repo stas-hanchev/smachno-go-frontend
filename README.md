@@ -52,8 +52,24 @@ server and fresh seed data; run `npx playwright install chromium` once.
 - `buyer-flow.spec.ts` registers a new user, reads the verification email from MailHog (`E2E_MAILHOG_URL`, default
   `http://localhost:8025`), books a set and pays with the test provider. The API allows 5 registrations per hour
   per IP (in memory), so restart the API between frequent runs.
-- `partner-pickup.spec.ts` buys a set as the seeded buyer (`customer@smachnogo.local`), then signs in as the seeded
-  partner (`partner@smachnogo.local`), opens `/partner/pickup` for that venue and hands the order out by its code.
+- `partner-pickup.spec.ts` buys a set for today as the seeded buyer (`customer@smachnogo.local`), then signs in as
+  the seeded partner (`partner@smachnogo.local`), opens `/partner/pickup` for that venue and hands the order out by
+  its code. Codes are checked only for today's orders, so the test needs a set on sale today.
+
+The API must send mail to MailHog (`SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`, no SMTP user). Every run buys up to four
+sets, and the API allows 5 sign-ins per 15 minutes per email and IP: after a few runs reseed the data and restart the
+API. To keep a dev setup that sends mail through Brevo untouched, start a second API and a production build on other
+ports and point the tests at it:
+
+```bash
+# smachno-go-backend
+PORT=4100 CORS_ORIGINS=http://localhost:3200 RUN_JOBS_IN_PROCESS=false SMTP_HOST=127.0.0.1 SMTP_PORT=1025   SMTP_USER= SMTP_PASSWORD= npx tsx --env-file-if-exists=.env src/server.ts
+# smachno-go-frontend
+API_URL=http://localhost:4100 NEXT_PUBLIC_API_ORIGIN=http://localhost:4100 npm run build && npx next start -p 3200
+E2E_BASE_URL=http://localhost:3200 npm run test:e2e
+```
+
+Rebuild with the default variables afterwards: the build keeps `API_URL`.
 
 ## Structure
 
