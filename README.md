@@ -120,6 +120,11 @@ and bookings carry `source`. Events are batched (`lib/interactions.ts`, up to 50
 on `pagehide` with `keepalive`) and sent to `/interactions` with an anonymous ULID (`sg-anon-id` in
 `localStorage`). Links from a section add `?from=<source>`, so a view and an order keep the source.
 
+## CI
+
+`.github/workflows/ci.yml` runs lint, typecheck, Prettier, Vitest and the production build on every push to `main`
+and on pull requests. The Playwright tests are not part of CI: they need a running API with seed data.
+
 ## Decisions that differ from TZ 1.1
 
 - Next.js 16 and MUI 9 instead of 15 and 6.
